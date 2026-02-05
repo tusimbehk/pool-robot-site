@@ -1,0 +1,35 @@
+# Docker Compose for PoolClean Pro
+# For local development and testing
+
+version: "3.8"
+
+services:
+  web:
+    build:
+      context: ./packages/web
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN=${SHOPIFY_STORE_DOMAIN}
+      - NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN=${SHOPIFY_STOREFRONT_ACCESS_TOKEN}
+      - NEXT_PUBLIC_SEGMENT_WRITE_KEY=${SEGMENT_WRITE_KEY}
+      - NEXT_PUBLIC_SENTRY_DSN=${SENTRY_DSN}
+      - NEXT_PUBLIC_CHATWOOT_TOKEN=${CHATWOOT_TOKEN}
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    depends_on:
+      - web
+    restart: unless-stopped
+
+volumes:
+  certs:

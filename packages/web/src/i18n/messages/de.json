@@ -1,0 +1,84 @@
+{
+  "common": {
+    "addToCart": "In den Warenkorb",
+    "buyNow": "Jetzt kaufen",
+    "checkout": "Kasse",
+    "cart": "Warenkorb",
+    "search": "Produkte suchen...",
+    "loading": "Laden...",
+    "noResults": "Keine Ergebnisse gefunden",
+    "login": "Anmelden",
+    "register": "Konto erstellen",
+    "logout": "Abmelden",
+    "account": "Konto",
+    "orders": "Bestellungen",
+    "settings": "Einstellungen",
+    "contact": "Kontakt",
+    "about": "Über uns",
+    "support": "Support",
+    "faq": "FAQ"
+  },
+  "nav": {
+    "products": "Produkte",
+    "about": "Über uns",
+    "support": "Support",
+    "contact": "Kontakt"
+  },
+  "home": {
+    "heroTitle": "Premium Poolreinigungsroboter",
+    "heroSubtitle": "Fortschrittliche Technologie für mühelosen Poolunterhalt",
+    "cta": "Jetzt shoppen",
+    "features": {
+      "title": "Warum PoolClean Pro?",
+      "ai": "KI-Navigation",
+      "powerful": "Leistungsstark",
+      "efficient": "Energieeffizient"
+    }
+  },
+  "products": {
+    "title": "Produkte",
+    "all": "Alle Produkte",
+    "filters": "Filter",
+    "sort": "Sortieren",
+    "sortOptions": {
+      "featured": "Empfohlen",
+      "priceAsc": "Preis: Aufsteigend",
+      "priceDesc": "Preis: Absteigend",
+      "nameAsc": "Name: A-Z",
+      "nameDesc": "Name: Z-A"
+    },
+    "categories": {
+      "all": "Alle",
+      "robots": "Roboter",
+      "accessories": "Zubehör"
+    }
+  },
+  "cart": {
+    "title": "Warenkorb",
+    "empty": "Ihr Warenkorb ist leer",
+    "subtotal": "Zwischensumme",
+    "shipping": "Versand",
+    "total": "Gesamt",
+    "taxIncluded": "Steuer inklusive",
+    "checkout": "Zur Kasse",
+    "continueShopping": "Weiter einkaufen",
+    "freeShipping": "Kostenloser Versand bei Bestellungen über 100 €"
+  },
+  "auth": {
+    "login": "Anmelden",
+    "register": "Konto erstellen",
+    "email": "E-Mail",
+    "password": "Passwort",
+    "confirmPassword": "Passwort bestätigen",
+    "forgotPassword": "Passwort vergessen?",
+    "noAccount": "Haben Sie kein Konto?",
+    "hasAccount": "Haben Sie bereits ein Konto?"
+  },
+  "footer": {
+    "tagline": "Premium Poolreinigungsroboter für den europäischen und nordamerikanischen Markt",
+    "company": "Unternehmen",
+    "support": "Support",
+    "legal": "Rechtliches",
+    "rightsReserved": "Alle Rechte vorbehalten."
+  }
+}

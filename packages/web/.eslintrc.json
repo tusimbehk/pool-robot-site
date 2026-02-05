@@ -1,0 +1,5 @@
+{
+  "extends": ["next/core-web-vitals", "next/typescript"],
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules"]
+}
