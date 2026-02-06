@@ -31,22 +31,22 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
 }
 
 async function getProduct(slug: string) {
-  // For now, use mock data during build
-  // TODO: Enable real Shopify fetch when configured
-  return mockProducts.find((p) => p.handle === slug) || null;
+  const { isShopifyConfigured } = await import("@/lib/shopify");
 
-  // When Shopify is configured, uncomment below:
-  // const { getShopifyClient } = await import("@/lib/shopify/client-helpers");
-  // const { isShopifyConfigured } = await import("@/lib/shopify/client-helpers");
-  // if (!isShopifyConfigured()) {
-  //   return mockProducts.find((p) => p.handle === slug) || null;
-  // }
-  // try {
-  //   const client = getShopifyClient();
-  //   return await client.getProduct(slug);
-  // } catch {
-  //   return mockProducts.find((p) => p.handle === slug) || null;
-  // }
+  // Fallback to mock data if Shopify not configured
+  if (!isShopifyConfigured()) {
+    return mockProducts.find((p) => p.handle === slug) || null;
+  }
+
+  // Try real Shopify fetch
+  try {
+    const { shopifyClient } = await import("@/lib/shopify/client");
+    return await shopifyClient.getProduct(slug);
+  } catch (error) {
+    console.error("Shopify fetch error:", error);
+    // Fallback to mock data on error
+    return mockProducts.find((p) => p.handle === slug) || null;
+  }
 }
 
 export async function generateStaticParams() {
@@ -64,14 +64,23 @@ export default async function ProductPage({ params }: ProductPageProps) {
   }
 
   // Get related products (same type, excluding current)
-  const relatedProducts = mockProducts
-    .filter(
-      (p) =>
-        p.productType === product.productType &&
-        p.id !== product.id &&
-        p.availableForSale
-    )
-    .slice(0, 4);
+  let relatedProducts: typeof mockProducts = [];
+
+  const { isShopifyConfigured } = await import("@/lib/shopify");
+  if (isShopifyConfigured()) {
+    // For Shopify, we'd need to fetch related products
+    // For now, just show nothing or could fetch by type
+    relatedProducts = [];
+  } else {
+    relatedProducts = mockProducts
+      .filter(
+        (p) =>
+          p.productType === product.productType &&
+          p.id !== product.id &&
+          p.availableForSale
+      )
+      .slice(0, 4);
+  }
 
   return (
     <div className="container py-8">
