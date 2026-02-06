@@ -2,7 +2,15 @@
 
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazy initialize Resend only when API key is available
+let resend: Resend | null = null;
+
+function getResendClient() {
+  if (!resend && process.env.RESEND_API_KEY) {
+    resend = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resend;
+}
 
 const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@poolclean.com';
 
@@ -100,7 +108,13 @@ export async function sendCartRecoveryEmail({
   `;
 
   try {
-    const data = await resend.emails.send({
+    const client = getResendClient();
+    if (!client) {
+      console.error('[Resend] No API key configured');
+      return { success: false, error: 'No API key configured' };
+    }
+
+    const data = await client.emails.send({
       from: FROM_EMAIL,
       to,
       subject: '🛒 您购物车中的商品在等您',
