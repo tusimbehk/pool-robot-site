@@ -148,6 +148,22 @@ function detectOS(): string {
 }
 
 /**
+ * Check if analytics is allowed by cookie consent
+ */
+function isAnalyticsAllowed(): boolean {
+  if (typeof window === 'undefined') return false;
+
+  try {
+    const consent = localStorage.getItem('cookie-consent');
+    if (!consent) return false;
+    const parsed = JSON.parse(consent) as { necessary: boolean; analytics: boolean; marketing: boolean };
+    return parsed.analytics === true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Send event to self-hosted API (Dual-Write)
  */
 async function sendToSelfHostedAPI(
@@ -156,6 +172,11 @@ async function sendToSelfHostedAPI(
   anonymousId: string,
   userId?: string
 ): Promise<void> {
+  // Check cookie consent before sending
+  if (!isAnalyticsAllowed()) {
+    return;
+  }
+
   const payload = {
     event: eventName,
     properties,

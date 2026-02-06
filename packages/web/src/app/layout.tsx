@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { CartSheet } from "@/components/cart/cart-sheet";
+import { CookieBanner } from "@/components/cookie-banner";
 import "@/styles/globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -20,6 +22,8 @@ export default function RootLayout({
         <div className="min-h-screen">
           {children}
         </div>
+        <CartSheet />
+        <CookieBanner />
       </body>
     </html>
   );
