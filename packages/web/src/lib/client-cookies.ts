@@ -1,6 +1,6 @@
 /**
  * Client-side Cookie utilities for analytics
- * Does NOT use next/headers - safe for use in any context
+ * Pure JavaScript implementation without Next.js dependencies
  */
 
 export const ID_KEYS = {
@@ -10,14 +10,22 @@ export const ID_KEYS = {
 } as const;
 
 /**
- * Parse cookies from a Cookie header string
+ * Parse cookies from a cookie header string
  */
 export function parseCookies(cookieHeader: string): Record<string, string> {
   const cookies: Record<string, string> = {};
+  if (!cookieHeader) return cookies;
+
   cookieHeader.split(';').forEach(cookie => {
-    const [name, value] = cookie.trim().split('=');
-    if (name && value) {
-      cookies[name] = decodeURIComponent(value);
+    const parts = cookie.trim().split('=');
+    if (parts.length >= 2) {
+      const name = parts[0];
+      const value = parts.slice(1).join('=');
+      try {
+        cookies[name] = decodeURIComponent(value);
+      } catch {
+        cookies[name] = value;
+      }
     }
   });
   return cookies;
@@ -63,7 +71,8 @@ export function getAnonymousId(): string {
 
   // Generate and set new anonymous ID
   const newId = `anon_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-  document.cookie = `${ID_KEYS.ANONYMOUS_ID}=${newId}; path=/; max-age=${60 * 60 * 24 * 365 * 2}; SameSite=lax`;
+  const maxAge = 60 * 60 * 24 * 365 * 2; // 2 years
+  document.cookie = `${ID_KEYS.ANONYMOUS_ID}=${encodeURIComponent(newId)}; path=/; max-age=${maxAge}; SameSite=lax`;
   return newId;
 }
 
@@ -87,7 +96,8 @@ export function setUserId(userId: string): void {
     return;
   }
 
-  document.cookie = `${ID_KEYS.USER_ID}=${userId}; path=/; max-age=${60 * 60 * 24 * 365 * 2}; SameSite=lax`;
+  const maxAge = 60 * 60 * 24 * 365 * 2; // 2 years
+  document.cookie = `${ID_KEYS.USER_ID}=${encodeURIComponent(userId)}; path=/; max-age=${maxAge}; SameSite=lax`;
 }
 
 /**
