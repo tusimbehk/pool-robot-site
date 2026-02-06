@@ -82,3 +82,38 @@ export const orderItems = pgTable('order_items', {
   price: decimal('price', { precision: 10, scale: 2 }),
   totalDiscount: decimal('total_discount', { precision: 10, scale: 2 }),
 });
+
+export const userProfiles = pgTable('user_profiles', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').references(() => users.id).unique(),
+  countryCode: varchar('country_code', { length: 2 }),
+  timezone: varchar('timezone', { length: 50 }),
+  language: varchar('language', { length: 10 }).default('zh-CN'),
+  currency: varchar('currency', { length: 3 }).default('USD'),
+  preferredPriceRange: varchar('preferred_price_range', { length: 20 }),
+  productCategoryPreference: jsonb('product_category_preference'), // string[]
+  tags: jsonb('tags'), // string[]
+  totalOrders: integer('total_orders').default(0),
+  totalSpent: decimal('total_spent', { precision: 10, scale: 2 }).default('0'),
+  avgOrderValue: decimal('avg_order_value', { precision: 10, scale: 2 }),
+  lastPurchaseAt: timestamp('last_purchase_at'),
+  rScore: integer('r_score'), // Recency score 1-5
+  fScore: integer('f_score'), // Frequency score 1-5
+  mScore: integer('m_score'), // Monetary score 1-5
+  segment: varchar('segment', { length: 50 }),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const abandonedCartEmails = pgTable('abandoned_cart_emails', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  sessionId: varchar('session_id', { length: 255 }).unique(),
+  userId: uuid('user_id').references(() => users.id),
+  email: varchar('email', { length: 255 }),
+  sentAt: timestamp('sent_at').defaultNow(),
+  clickedAt: timestamp('clicked_at'),
+  recoveredAt: timestamp('recovered_at'),
+  discountCode: varchar('discount_code', { length: 50 }),
+  cartItems: jsonb('cart_items'), // Store cart snapshot
+  cartTotal: decimal('cart_total', { precision: 10, scale: 2 }),
+});
