@@ -1,9 +1,12 @@
 /**
- * Segment Analytics Configuration
+ * Segment Analytics Configuration with Dual-Write Strategy
  *
- * Analytics utility using Segment for event tracking
- * Falls back to console logging when Segment is not configured
+ * Analytics utility using Segment + self-hosted API for event tracking
+ * Implements dual-write: sends events to both Segment and own API
+ * Falls back to console logging when neither is available
  */
+
+import { getAnonymousId as getCookieAnonymousId, getUserId } from './cookies';
 
 // Type declaration for Segment Analytics.js
 declare global {
@@ -102,54 +105,172 @@ export function isAnalyticsReady(): boolean {
 }
 
 /**
- * Track a page view
+ * Get device information for context
+ */
+function getDeviceInfo() {
+  if (typeof window === "undefined") {
+    return { type: "unknown" };
+  }
+
+  const ua = navigator.userAgent;
+  const type = /Mobile|Android|iPhone/i.test(ua) ? "mobile" :
+               /Tablet|iPad/i.test(ua) ? "tablet" : "desktop";
+
+  return {
+    type,
+    browser: detectBrowser(),
+    os: detectOS(),
+    screen: `${window.screen.width}x${window.screen.height}`,
+  };
+}
+
+function detectBrowser(): string {
+  if (typeof window === "undefined") return "unknown";
+
+  const ua = navigator.userAgent;
+  if (ua.includes("Chrome")) return "Chrome";
+  if (ua.includes("Safari")) return "Safari";
+  if (ua.includes("Firefox")) return "Firefox";
+  if (ua.includes("Edge")) return "Edge";
+  return "Unknown";
+}
+
+function detectOS(): string {
+  if (typeof window === "undefined") return "unknown";
+
+  const ua = navigator.userAgent;
+  if (ua.includes("Windows")) return "Windows";
+  if (ua.includes("Mac")) return "macOS";
+  if (ua.includes("iOS")) return "iOS";
+  if (ua.includes("Android")) return "Android";
+  if (ua.includes("Linux")) return "Linux";
+  return "Unknown";
+}
+
+/**
+ * Send event to self-hosted API (Dual-Write)
+ */
+async function sendToSelfHostedAPI(
+  eventName: string,
+  properties: Record<string, unknown>,
+  anonymousId: string,
+  userId?: string
+): Promise<void> {
+  const payload = {
+    event: eventName,
+    properties,
+    anonymousId,
+    userId: userId || undefined,
+    context: {
+      page: typeof window !== "undefined" ? window.location.href : "",
+      pageTitle: typeof window !== "undefined" ? document.title : "",
+      referrer: typeof window !== "undefined" ? document.referrer : "",
+      device: getDeviceInfo(),
+    },
+    timestamp: new Date().toISOString(),
+  };
+
+  try {
+    await fetch('/api/events/track', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  } catch (err) {
+    // 静默失败，不影响用户体验
+    console.error('[Analytics] Failed to send event to self-hosted API:', err);
+  }
+}
+
+/**
+ * Track a page view (Dual-Write)
  */
 export function trackPage(page: SegmentPage): void {
+  // 1. Send to Segment
   if (!isAnalyticsReady()) {
     console.log("[Segment] Page:", page);
-    return;
+  } else {
+    const analytics = getAnalytics();
+    if (analytics) {
+      analytics.page(page.name || "", page.properties, {
+        userId: page.userId,
+        anonymousId: page.anonymousId,
+      });
+    }
   }
 
-  const analytics = getAnalytics();
-  if (analytics) {
-    analytics.page(page.name || "", page.properties, {
-      userId: page.userId,
-      anonymousId: page.anonymousId,
-    });
-  }
+  // 2. Send to self-hosted API (Dual-Write)
+  const anonymousId = getCookieAnonymousId();
+  const userId = getUserId();
+  sendToSelfHostedAPI(
+    'Page Viewed',
+    {
+      page_name: page.name || '',
+      ...page.properties,
+    },
+    anonymousId,
+    userId || page.userId
+  );
 }
 
 /**
- * Track an event
+ * Track an event (Dual-Write)
  */
 export function trackEvent(event: SegmentEvent): void {
+  // 1. Send to Segment
   if (!isAnalyticsReady()) {
     console.log("[Segment] Event:", event);
-    return;
+  } else {
+    const analytics = getAnalytics();
+    if (analytics) {
+      analytics.track(event.event, event.properties, {
+        userId: event.userId,
+        anonymousId: event.anonymousId,
+      });
+    }
   }
 
-  const analytics = getAnalytics();
-  if (analytics) {
-    analytics.track(event.event, event.properties, {
-      userId: event.userId,
-      anonymousId: event.anonymousId,
-    });
-  }
+  // 2. Send to self-hosted API (Dual-Write)
+  const anonymousId = event.anonymousId || getCookieAnonymousId();
+  const userId = event.userId || getUserId();
+  sendToSelfHostedAPI(
+    event.event,
+    event.properties || {},
+    anonymousId,
+    userId
+  );
 }
 
 /**
- * Identify a user
+ * Identify a user (Dual-Write)
  */
 export function identifyUser(user: SegmentIdentify): void {
+  // 1. Send to Segment
   if (!isAnalyticsReady()) {
     console.log("[Segment] Identify:", user);
-    return;
+  } else {
+    const analytics = getAnalytics();
+    if (analytics) {
+      analytics.identify(user.userId, user.traits);
+    }
   }
 
-  const analytics = getAnalytics();
-  if (analytics) {
-    analytics.identify(user.userId, user.traits);
-  }
+  // 2. Send to self-hosted API (Dual-Write)
+  const anonymousId = getCookieAnonymousId();
+  const traits = user.traits || {};
+
+  // Non-blocking send
+  fetch('/api/users/identify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      userId: user.userId,
+      anonymousId,
+      traits,
+    }),
+  }).catch((err) => {
+    console.error('[Analytics] Failed to identify user:', err);
+  });
 }
 
 /**
@@ -171,9 +292,8 @@ export function aliasUser(previousId: string, userId: string): void {
  * Get anonymous ID for current session
  */
 export function getAnonymousId(): string | undefined {
-  const analytics = getAnalytics();
-  // @ts-ignore - Segment types may not match exactly
-  return analytics?.user?.()?.anonymousId?.();
+  // Use cookie-based anonymous ID for dual-write
+  return getCookieAnonymousId();
 }
 
 /**
@@ -188,6 +308,10 @@ export function resetAnalytics(): void {
   if (process.env.NODE_ENV === "development") {
     console.log("[Segment] Reset");
   }
+
+  // Track logout event to self-hosted API
+  const anonymousId = getCookieAnonymousId();
+  sendToSelfHostedAPI('User Logged Out', {}, anonymousId);
 }
 
 /**
