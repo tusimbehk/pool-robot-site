@@ -273,6 +273,57 @@ const CART_DISCOUNT_CODES_UPDATE_MUTATION = `
   }
 ` as const;
 
+// ==================== QUERIES ====================
+
+const GET_CART_QUERY = `
+  query GetCart($cartId: ID!) {
+    cart(id: $cartId) {
+      id
+      checkoutUrl
+      lines(first: 50) {
+        edges {
+          node {
+            id
+            quantity
+            merchandise {
+              ... on ProductVariant {
+                id
+                title
+                product {
+                  title
+                  handle
+                }
+                price {
+                  amount
+                  currencyCode
+                }
+                image {
+                  url
+                  altText
+                }
+              }
+            }
+          }
+        }
+      }
+      cost {
+        subtotalAmount {
+          amount
+          currencyCode
+        }
+        totalAmount {
+          amount
+          currencyCode
+        }
+        taxAmount {
+          amount
+          currencyCode
+        }
+      }
+    }
+  }
+` as const;
+
 // ==================== CART API ====================
 
 export interface CartLineInput {
@@ -476,5 +527,21 @@ export const cartApi = {
    */
   async removeDiscountCode(cartId: string): Promise<Cart | null> {
     return this.addDiscountCode(cartId, []);
+  },
+
+  /**
+   * Get cart by ID (with checkout URL)
+   *
+   * @param cartId - The cart ID
+   * @returns Cart object or null if failed
+   */
+  async getCart(cartId: string): Promise<Cart | null> {
+    return withRetry(async () => {
+      const data = await shopifyFetch<{
+        cart: Cart | null;
+      }>(GET_CART_QUERY, { cartId });
+
+      return data.cart;
+    });
   },
 };

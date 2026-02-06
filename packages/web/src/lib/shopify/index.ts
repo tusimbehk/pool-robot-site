@@ -32,6 +32,14 @@ export { getShopifyClient, isShopifyConfigured } from "./client-helpers";
 export { cartApi } from "./cart-api";
 export type { CartLineInput, CartLineUpdateInput, UserError } from "./cart-api";
 
+// Export error handling
+export {
+  ShopifyError,
+  parseShopifyError,
+  handleShopifyError,
+} from "./error-handler";
+export type { ShopifyErrorCode } from "./error-handler";
+
 // Export currency helpers
 export {
   convertShopifyPrice,

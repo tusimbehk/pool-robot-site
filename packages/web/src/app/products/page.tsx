@@ -1,7 +1,10 @@
 import { Metadata } from "next";
-import { getShopifyClient, mockProductsConnection } from "@/lib/shopify";
+import { getShopifyClient, isShopifyConfigured, mockProductsConnection } from "@/lib/shopify";
 import { ProductList, ProductFilters, ProductSort } from "@/components/product";
 import { Suspense } from "react";
+
+// Revalidate page every hour for fresh product data
+export const revalidate = 3600;
 
 interface ProductsPageProps {
   searchParams: Promise<{
@@ -24,22 +27,25 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   // Fetch initial products server-side
   let initialProducts = mockProductsConnection.edges.map((e) => e.node);
 
-  try {
-    const client = getShopifyClient();
-    let query = "";
+  if (isShopifyConfigured()) {
+    try {
+      const client = getShopifyClient();
+      let query = "";
 
-    if (tag) {
-      query = `tag:${tag}`;
-    } else if (type) {
-      query = `product_type:${type === "robots" ? "Robotic Pool Cleaner" : "Accessories"}`;
-    }
+      if (tag) {
+        query = `tag:${tag}`;
+      } else if (type) {
+        query = `product_type:${type === "robots" ? "Robotic Pool Cleaner" : "Accessories"}`;
+      }
 
-    const result = await client.getProducts(20, undefined, query);
-    if (result.edges.length > 0) {
-      initialProducts = result.edges.map((e) => e.node);
+      const result = await client.getProducts(20, undefined, query);
+      if (result.edges.length > 0) {
+        initialProducts = result.edges.map((e) => e.node);
+      }
+    } catch (error) {
+      console.error("Shopify fetch error:", error);
+      // Use mock data as fallback
     }
-  } catch {
-    // Use mock data if fetch fails
   }
 
   return (

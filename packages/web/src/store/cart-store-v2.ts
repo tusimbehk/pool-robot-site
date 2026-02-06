@@ -49,7 +49,7 @@ interface ExtendedCartState extends ShopifyCartState {
   removeItemWithSync: (merchandiseId: string) => Promise<void>;
   clearCartWithSync: () => Promise<void>;
   syncWithShopify: () => Promise<void>;
-  getCheckoutUrl: () => string | null;
+  getCheckoutUrl: () => Promise<string | null>;
 }
 
 const EMPTY_CART: CartItem[] = [];
@@ -241,14 +241,19 @@ export const useCartStore = create<ExtendedCartState>()(
         set({ isSyncing: false });
       },
 
-      getCheckoutUrl: () => {
+      getCheckoutUrl: async () => {
         const { cartId } = get();
         if (!cartId || !isShopifyConfigured()) {
           return null;
         }
-        // Note: This would need to fetch the cart to get checkoutUrl
-        // For now, return the cart ID which can be used to construct checkout URL
-        return `/checkout?cart=${cartId}`;
+
+        try {
+          const cart = await cartApi.getCart(cartId);
+          return cart?.checkoutUrl || null;
+        } catch (error) {
+          console.error("Failed to get checkout URL:", error);
+          return null;
+        }
       },
 
       isOpen: false,

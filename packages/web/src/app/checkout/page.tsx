@@ -1,36 +1,71 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useCartStore } from "@/store/cart-store";
+import { useCartStore } from "@/store/cart-store-v2";
 import { Loader2 } from "lucide-react";
+
+const CHECKOUT_TIMEOUT_MS = 10000; // 10 seconds
 
 /**
  * Checkout redirect page
  *
- * Redirects to Shopify checkout or shows error if cart is empty
+ * Redirects to Shopify checkout using real checkout URL
  */
 export default function CheckoutClientPage() {
   const router = useRouter();
-  const { items, cartId, isSyncing } = useCartStore();
+  const getTotalItems = useCartStore((state) => state.getTotalItems);
+  const hasRedirected = useRef(false);
+  const timeoutRef = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
-    // If cart is empty, redirect to products
-    if (items.length === 0 && !isSyncing) {
-      router.push("/products");
-      return;
-    }
+    // Prevent multiple redirects
+    if (hasRedirected.current) return;
 
-    // If we have a Shopify cart ID, redirect to checkout
-    if (cartId) {
-      // In production, this would be the Shopify checkout URL
-      // For now, we'll use a mock checkout flow
-      router.push(`/thank-you?cart=${cartId}`);
-    } else {
-      // Redirect to cart page with error
-      router.push("/cart?error=checkout");
-    }
-  }, [items, cartId, isSyncing, router]);
+    const redirectToCheckout = async () => {
+      // If cart is empty, redirect to products
+      if (getTotalItems() === 0) {
+        router.push("/products");
+        return;
+      }
+
+      try {
+        // Set timeout for safety
+        timeoutRef.current = setTimeout(() => {
+          router.push("/cart?error=checkout-timeout");
+        }, CHECKOUT_TIMEOUT_MS);
+
+        // Get real Shopify checkout URL
+        const checkoutUrl = await useCartStore.getState().getCheckoutUrl();
+
+        // Clear timeout on success
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+        }
+
+        if (checkoutUrl) {
+          hasRedirected.current = true;
+          // Redirect to Shopify checkout
+          window.location.href = checkoutUrl;
+        } else {
+          // Fallback: redirect to cart with error
+          router.push("/cart?error=checkout-failed");
+        }
+      } catch (error) {
+        console.error("Checkout redirect failed:", error);
+        router.push("/cart?error=checkout-error");
+      }
+    };
+
+    redirectToCheckout();
+
+    // Cleanup function
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [router, getTotalItems]);
 
   return (
     <div className="flex min-h-[400px] flex-col items-center justify-center">
