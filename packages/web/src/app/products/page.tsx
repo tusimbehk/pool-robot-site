@@ -3,6 +3,9 @@ import { getShopifyClient, isShopifyConfigured, mockProductsConnection } from "@
 import { ProductList, ProductFilters, ProductSort } from "@/components/product";
 import { Suspense } from "react";
 
+// Revalidate page every hour for fresh product data
+export const revalidate = 3600;
+
 interface ProductsPageProps {
   searchParams: Promise<{
     type?: string;
@@ -16,14 +19,6 @@ export async function generateMetadata(): Promise<Metadata> {
     title: "Products - PoolClean Pro",
     description: "Browse our range of premium pool cleaning robots and accessories",
   };
-}
-
-export async function generateStaticParams() {
-  // For static generation, use mock data
-  // In production with Shopify, use ISR or revalidate
-  return mockProductsConnection.edges.map((edge) => ({
-    slug: edge.node.handle,
-  }));
 }
 
 export default async function ProductsPage({ searchParams }: ProductsPageProps) {
