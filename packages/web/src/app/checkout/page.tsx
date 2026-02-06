@@ -2,35 +2,40 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useCartStore } from "@/store/cart-store";
+import { useCartStore } from "@/store/cart-store-v2";
 import { Loader2 } from "lucide-react";
 
 /**
  * Checkout redirect page
  *
- * Redirects to Shopify checkout or shows error if cart is empty
+ * Redirects to Shopify checkout using real checkout URL
  */
 export default function CheckoutClientPage() {
   const router = useRouter();
-  const { items, cartId, isSyncing } = useCartStore();
+  const { items, getTotalItems } = useCartStore();
 
   useEffect(() => {
-    // If cart is empty, redirect to products
-    if (items.length === 0 && !isSyncing) {
-      router.push("/products");
-      return;
-    }
+    const redirectToCheckout = async () => {
+      // If cart is empty, redirect to products
+      if (getTotalItems() === 0) {
+        router.push("/products");
+        return;
+      }
 
-    // If we have a Shopify cart ID, redirect to checkout
-    if (cartId) {
-      // In production, this would be the Shopify checkout URL
-      // For now, we'll use a mock checkout flow
-      router.push(`/thank-you?cart=${cartId}`);
-    } else {
-      // Redirect to cart page with error
-      router.push("/cart?error=checkout");
-    }
-  }, [items, cartId, isSyncing, router]);
+      // Get real Shopify checkout URL
+      const checkoutUrl = await useCartStore.getState().getCheckoutUrl();
+
+      if (checkoutUrl) {
+        // Redirect to Shopify checkout
+        window.location.href = checkoutUrl;
+      } else {
+        // Fallback: redirect to cart with error
+        router.push("/cart?error=checkout-failed");
+      }
+    };
+
+    redirectToCheckout();
+  }, [items, router, getTotalItems]);
 
   return (
     <div className="flex min-h-[400px] flex-col items-center justify-center">
