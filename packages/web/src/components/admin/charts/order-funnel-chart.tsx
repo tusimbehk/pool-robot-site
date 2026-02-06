@@ -48,7 +48,6 @@ export function OrderFunnelChart({ data }: OrderFunnelChartProps) {
               border: '1px solid #E5E7EB',
               borderRadius: '0.5rem',
             }}
-            formatter={(value: number) => [value.toLocaleString(), '数量'] as const}
           />
           <Bar dataKey="count" radius={[0, 4, 4, 0]}>
             {data.map((_, index) => (

@@ -53,10 +53,6 @@ export function ProductSalesChart({ data }: ProductSalesChartProps) {
               border: '1px solid #E5E7EB',
               borderRadius: '0.5rem',
             }}
-            formatter={(value: number, name: string) => {
-              if (name === 'quantity') return [value.toLocaleString(), '销量'] as const;
-              return [value, '收入'] as const;
-            }}
           />
           <Bar dataKey="quantity" fill="#8B5CF6" radius={[0, 4, 4, 0]} />
         </BarChart>
