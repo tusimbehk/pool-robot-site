@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { users, userEvents } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, isNull } from 'drizzle-orm';
 
-export const runtime = 'node'; // Changed from 'edge' to 'node' for better compatibility
+export const runtime = 'nodejs'; // Changed from 'edge' to 'nodejs' for better compatibility
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       .where(
         and(
           eq(userEvents.anonymousId, anonymousId),
-          eq(userEvents.userId, null)
+          isNull(userEvents.userId)
         )
       )
       .returning();

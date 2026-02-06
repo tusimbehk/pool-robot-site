@@ -6,7 +6,7 @@
  * Falls back to console logging when neither is available
  */
 
-import { getAnonymousId as getCookieAnonymousId, getUserId } from './cookies';
+import { getAnonymousId as getCookieAnonymousId, getUserId } from './client-cookies';
 
 // Type declaration for Segment Analytics.js
 declare global {

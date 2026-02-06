@@ -3,7 +3,7 @@ import { db } from '@/db';
 import { userEvents } from '@/db/schema';
 import { validateEventPayload } from '@/lib/analytics/validation';
 
-export const runtime = 'node'; // Changed from 'edge' to 'node' for better compatibility
+export const runtime = 'nodejs'; // Changed from 'edge' to 'nodejs' for better compatibility
 
 export async function POST(request: NextRequest) {
   try {

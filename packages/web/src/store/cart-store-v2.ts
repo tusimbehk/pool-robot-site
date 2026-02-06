@@ -132,7 +132,7 @@ export const useCartStore = create<ExtendedCartState>()(
               }
             }
           } catch (error) {
-            console.error("Failed to sync with Shopify:", error);
+            console.error("[Cart Store] Failed to sync with Shopify:", error);
             set({
               syncError: error instanceof Error ? error.message : "Sync failed",
             });
@@ -263,6 +263,11 @@ export const useCartStore = create<ExtendedCartState>()(
       partialize: (state) => ({
         items: state.items,
         cartId: state.cartId,
+      }),
+      merge: (persistedState, currentState) => ({
+        ...currentState,
+        ...(persistedState as Partial<ExtendedCartState>),
+        isOpen: false, // Always start with cart closed
       }),
     }
   )

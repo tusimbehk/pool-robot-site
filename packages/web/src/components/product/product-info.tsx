@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Check, Truck, Shield, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui";
 import { Badge } from "@/components/ui";
-import { useCartStore } from "@/store/cart-store";
+import { useCartStore } from "@/store/cart-store-v2";
 import { useToast } from "@/components/ui/use-toast";
 import { useAnalytics } from "@/hooks/use-analytics";
+import { formatPrice, calculateSavings } from "@/lib/currency";
 import type { Product, ProductVariant } from "@/lib/shopify";
+import { isShopifyConfigured } from "@/lib/shopify";
 
 interface ProductInfoProps {
   product: Product;
@@ -24,34 +26,61 @@ export function ProductInfo({ product }: ProductInfoProps) {
     product.variants[0]
   );
   const [quantity, setQuantity] = useState(1);
+  const [isAdding, setIsAdding] = useState(false);
   const addItem = useCartStore((state) => state.addItem);
+  const addItemWithSync = useCartStore((state) => state.addItemWithSync);
   const { toast } = useToast();
   const { trackProduct, trackAddToCart, trackCheckout } = useAnalytics();
-  const [viewTracked, setViewTracked] = useState(false);
 
-  // Track product view when component mounts
+  // Track product view once when component mounts
   useEffect(() => {
-    if (!viewTracked) {
-      trackProduct({
-        id: product.id,
-        name: product.title,
-        price: parseFloat(selectedVariant.price.amount),
-        currency: selectedVariant.price.currencyCode,
-        category: product.productType,
-        variant: selectedVariant.title,
-      });
-      setViewTracked(true);
-    }
-  }, [product, selectedVariant, trackProduct, viewTracked]);
+    trackProduct({
+      id: product.id,
+      name: product.title,
+      price: parseFloat(selectedVariant.price.amount),
+      currency: selectedVariant.price.currencyCode,
+      category: product.productType,
+      variant: selectedVariant.title,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product.id]); // Only track when product ID changes
 
-  const price = selectedVariant.price;
-  const compareAtPrice = selectedVariant.compareAtPrice;
-  const savings = compareAtPrice
-    ? parseFloat(compareAtPrice.amount) - parseFloat(price.amount)
-    : 0;
+  // Memoize price calculations
+  const price = useMemo(() => selectedVariant.price, [selectedVariant.price]);
+  const compareAtPrice = useMemo(
+    () => selectedVariant.compareAtPrice,
+    [selectedVariant.compareAtPrice]
+  );
+  const savings = useMemo(
+    () =>
+      compareAtPrice
+        ? calculateSavings(parseFloat(compareAtPrice.amount), parseFloat(price.amount))
+        : 0,
+    [compareAtPrice, price.amount]
+  );
 
-  function handleAddToCart() {
-    if (!product.availableForSale || !selectedVariant.availableForSale) {
+  // Memoize formatted prices
+  const formattedPrice = useMemo(
+    () => formatPrice(parseFloat(price.amount), price.currencyCode as any),
+    [price]
+  );
+  const formattedCompareAtPrice = useMemo(
+    () =>
+      compareAtPrice
+        ? formatPrice(parseFloat(compareAtPrice.amount), compareAtPrice.currencyCode as any)
+        : null,
+    [compareAtPrice]
+  );
+
+  // Check if product is available
+  const isAvailable = useMemo(
+    () => product.availableForSale && selectedVariant.availableForSale,
+    [product.availableForSale, selectedVariant.availableForSale]
+  );
+
+  // Stable add to cart handler
+  const handleAddToCart = useCallback(async () => {
+    if (!isAvailable) {
       toast({
         title: "Product unavailable",
         description: "This product is currently out of stock.",
@@ -60,60 +89,101 @@ export function ProductInfo({ product }: ProductInfoProps) {
       return;
     }
 
-    // Track add to cart event
-    trackAddToCart({
-      id: selectedVariant.id,
-      name: product.title,
-      price: parseFloat(price.amount),
-      quantity,
-      currency: price.currencyCode,
-    });
+    setIsAdding(true);
 
-    addItem({
-      merchandiseId: selectedVariant.id,
-      quantity,
-      title: product.title,
-      price: parseFloat(price.amount),
-      image: product.images[0]?.url,
-      handle: product.handle,
-    });
+    try {
+      // Track add to cart event
+      trackAddToCart({
+        id: selectedVariant.id,
+        name: product.title,
+        price: parseFloat(price.amount),
+        quantity,
+        currency: price.currencyCode,
+      });
 
-    toast({
-      title: "Added to cart",
-      description: `${quantity} × ${product.title} has been added to your cart.`,
-    });
-  }
+      const item = {
+        merchandiseId: selectedVariant.id,
+        quantity,
+        title: product.title,
+        price: parseFloat(price.amount),
+        image: product.images[0]?.url,
+        handle: product.handle,
+      };
 
-  function handleBuyNow() {
-    // First add to cart
-    handleAddToCart();
+      // Use addItemWithSync if Shopify is configured, otherwise use local addItem
+      if (isShopifyConfigured()) {
+        await addItemWithSync(item);
+      } else {
+        addItem(item);
+      }
 
-    // Then track checkout started
-    const total = parseFloat(price.amount) * quantity;
+      toast({
+        title: "Added to cart",
+        description: `${quantity} × ${product.title} has been added to your cart.`,
+      });
+    } catch (error) {
+      console.error("Failed to add to cart:", error);
+      // Fallback to local cart if sync fails
+      addItem({
+        merchandiseId: selectedVariant.id,
+        quantity,
+        title: product.title,
+        price: parseFloat(price.amount),
+        image: product.images[0]?.url,
+        handle: product.handle,
+      });
+      toast({
+        title: "Added to cart",
+        description: `${quantity} × ${product.title} has been added to your cart.`,
+      });
+    } finally {
+      setIsAdding(false);
+    }
+  }, [
+    isAvailable,
+    toast,
+    trackAddToCart,
+    selectedVariant,
+    product,
+    quantity,
+    price,
+    addItem,
+    addItemWithSync,
+  ]);
+
+  // Buy now handler - waits for cart sync before navigating
+  const handleBuyNow = useCallback(async () => {
+    await handleAddToCart();
+
+    // Track checkout started
     trackCheckout({
       cartId: `cart-${Date.now()}`,
-      total,
+      total: parseFloat(price.amount) * quantity,
       currency: price.currencyCode,
       itemCount: quantity,
     });
 
-    // Navigate to checkout
+    // Navigate to checkout (after sync completes)
     window.location.href = "/checkout";
-  }
+  }, [handleAddToCart, trackCheckout, price.amount, price.currencyCode, quantity]);
 
-  function handleVariantChange(variant: ProductVariant) {
-    setSelectedVariant(variant);
+  // Variant change handler
+  const handleVariantChange = useCallback(
+    (variant: ProductVariant) => {
+      setSelectedVariant(variant);
 
-    // Track variant change as another product view
-    trackProduct({
-      id: product.id,
-      name: product.title,
-      price: parseFloat(variant.price.amount),
-      currency: variant.price.currencyCode,
-      category: product.productType,
-      variant: variant.title,
-    });
-  }
+      // Track variant change as another product view
+      trackProduct({
+        id: product.id,
+        name: product.title,
+        price: parseFloat(variant.price.amount),
+        currency: variant.price.currencyCode,
+        category: product.productType,
+        variant: variant.title,
+      });
+    },
+    [product.id, product.title, product.productType, trackProduct]
+  );
 
   return (
     <div className="space-y-6">
@@ -125,22 +195,14 @@ export function ProductInfo({ product }: ProductInfoProps) {
 
       {/* Price */}
       <div className="flex items-baseline gap-3">
-        <span className="text-3xl font-bold">
-          {new Intl.NumberFormat("en-US", {
-            style: "currency",
-            currency: price.currencyCode,
-          }).format(parseFloat(price.amount))}
-        </span>
-        {compareAtPrice && (
+        <span className="text-3xl font-bold">{formattedPrice}</span>
+        {formattedCompareAtPrice && (
           <>
             <span className="text-lg text-muted-foreground line-through">
-              {new Intl.NumberFormat("en-US", {
-                style: "currency",
-                currency: compareAtPrice.currencyCode,
-              }).format(parseFloat(compareAtPrice.amount))}
+              {formattedCompareAtPrice}
             </span>
             {savings > 0 && (
-              <Badge variant="success">Save {price.currencyCode} {savings.toFixed(2)}</Badge>
+              <Badge variant="success">Save {savings.toFixed(2)}</Badge>
             )}
           </>
         )}
@@ -206,17 +268,15 @@ export function ProductInfo({ product }: ProductInfoProps) {
         <Button
           size="lg"
           className="flex-1"
-          disabled={!product.availableForSale || !selectedVariant.availableForSale}
+          disabled={!isAvailable || isAdding}
           onClick={handleAddToCart}
         >
-          {product.availableForSale && selectedVariant.availableForSale
-            ? "Add to cart"
-            : "Out of stock"}
+          {isAdding ? "Adding..." : isAvailable ? "Add to cart" : "Out of stock"}
         </Button>
         <Button
           size="lg"
           variant="outline"
-          disabled={!product.availableForSale || !selectedVariant.availableForSale}
+          disabled={!isAvailable || isAdding}
           onClick={handleBuyNow}
         >
           Buy now

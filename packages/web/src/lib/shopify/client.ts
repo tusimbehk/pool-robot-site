@@ -313,9 +313,19 @@ export const shopifyClient = {
    */
   async getProduct(handle: string): Promise<Product | null> {
     const data = await shopifyFetch<{
-      product: Product | null;
+      product: any; // Use any because Shopify returns nested structure
     }>(GET_PRODUCT_QUERY, { handle });
-    return data.product;
+
+    if (!data.product) {
+      return null;
+    }
+
+    // Transform nested edges structure to flat arrays
+    return {
+      ...data.product,
+      images: data.product.images?.edges?.map((e: any) => e.node) || [],
+      variants: data.product.variants?.edges?.map((e: any) => e.node) || [],
+    } as Product;
   },
 
   /**

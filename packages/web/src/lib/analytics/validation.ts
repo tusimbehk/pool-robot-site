@@ -27,6 +27,16 @@ export const EventPayloadSchema = z.object({
 
 export type EventPayload = z.infer<typeof EventPayloadSchema>;
 
-export function validateEventPayload(data: unknown) {
-  return EventPayloadSchema.safeParse(data);
+// Simple validation function without Zod's safeParse
+export function validateEventPayload(data: unknown): { success: boolean; data?: EventPayload; error?: any } {
+  try {
+    const result = EventPayloadSchema.safeParse(data);
+    if (result.success) {
+      return { success: true, data: result.data };
+    } else {
+      return { success: false, error: result.error };
+    }
+  } catch (error) {
+    return { success: false, error };
+  }
 }

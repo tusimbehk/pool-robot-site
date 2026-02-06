@@ -13,6 +13,7 @@ export default defineConfig({
       "**/e2e/**",
       "**/*.spec.ts",
       "**/build/**",
+      "**/.worktrees/**",
     ],
     coverage: {
       provider: "v8",

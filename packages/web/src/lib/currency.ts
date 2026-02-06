@@ -3,9 +3,47 @@
  *
  * Handles currency formatting, conversion, and display
  * Supports: USD, EUR, GBP, CAD, and more
+ *
+ * Features memoized Intl.NumberFormat instances for optimal performance
  */
 
 export type CurrencyCode = "USD" | "EUR" | "GBP" | "CAD" | "AUD" | "CHF" | "NOK" | "SEK" | "DKK";
+
+/**
+ * Cache for memoized Intl.NumberFormat instances
+ */
+interface FormatCacheKey {
+  locale: string;
+  currency: CurrencyCode;
+  decimals: number;
+}
+
+const formatCache = new Map<string, Intl.NumberFormat>();
+
+function getCacheKey(locale: string, currency: CurrencyCode, decimals: number): string {
+  return `${locale}-${currency}-${decimals}`;
+}
+
+/**
+ * Get or create a memoized Intl.NumberFormat instance
+ */
+function getCachedFormatter(locale: string, currency: CurrencyCode, decimals: number): Intl.NumberFormat {
+  const key = getCacheKey(locale, currency, decimals);
+
+  if (!formatCache.has(key)) {
+    formatCache.set(
+      key,
+      new Intl.NumberFormat(locale, {
+        style: "currency",
+        currency,
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals,
+      })
+    );
+  }
+
+  return formatCache.get(key)!;
+}
 
 export interface CurrencyConfig {
   code: CurrencyCode;
@@ -99,7 +137,16 @@ export function getCurrencyConfig(code: CurrencyCode): CurrencyConfig {
 }
 
 /**
- * Format price in a specific currency
+ * Format price in a specific currency (with memoization)
+ *
+ * @param price - The price amount to format
+ * @param currencyCode - The currency code (default: "USD")
+ * @param locale - Optional locale override
+ * @returns Formatted price string
+ *
+ * @example
+ * formatPrice(19.99, "USD") // "$19.99"
+ * formatPrice(19.99, "EUR", "de-DE") // "19,99 €"
  */
 export function formatPrice(
   price: number,
@@ -109,12 +156,8 @@ export function formatPrice(
   const config = getCurrencyConfig(currencyCode);
   const formatLocale = locale || config.locale;
 
-  return new Intl.NumberFormat(formatLocale, {
-    style: "currency",
-    currency: currencyCode,
-    minimumFractionDigits: config.decimals,
-    maximumFractionDigits: config.decimals,
-  }).format(price);
+  const formatter = getCachedFormatter(formatLocale, currencyCode, config.decimals);
+  return formatter.format(price);
 }
 
 /**
@@ -264,4 +307,54 @@ export function detectCurrencyFromLocale(locale: string): CurrencyCode {
  */
 export function isValidCurrencyCode(code: string): code is CurrencyCode {
   return Object.keys(SUPPORTED_CURRENCIES).includes(code);
+}
+
+/**
+ * Format Shopify money object (convenience function for Shopify API responses)
+ *
+ * @param money - Shopify money object with amount and currencyCode
+ * @param locale - Optional locale override
+ * @returns Formatted price string
+ *
+ * @example
+ * formatShopifyMoney({ amount: "19.99", currencyCode: "USD" }) // "$19.99"
+ */
+export function formatShopifyMoney(
+  money: { amount: string; currencyCode: string },
+  locale?: string
+): string {
+  const currency = isValidCurrencyCode(money.currencyCode)
+    ? money.currencyCode
+    : "USD";
+  return formatPrice(parseFloat(money.amount), currency, locale);
+}
+
+/**
+ * Calculate savings amount from compare-at price
+ *
+ * @param price - Current price
+ * @param compareAtPrice - Original compare-at price
+ * @returns Savings amount (0 if compareAtPrice <= price)
+ */
+export function calculateSavings(price: number, compareAtPrice: number): number {
+  return Math.max(0, compareAtPrice - price);
+}
+
+/**
+ * Calculate discount percentage
+ *
+ * @param price - Current price
+ * @param compareAtPrice - Original compare-at price
+ * @returns Discount percentage (0-100)
+ */
+export function calculateDiscountPercentage(price: number, compareAtPrice: number): number {
+  if (compareAtPrice <= price) return 0;
+  return Math.round(((compareAtPrice - price) / compareAtPrice) * 100);
+}
+
+/**
+ * Clear the formatter cache (useful for testing or memory management)
+ */
+export function clearFormatCache(): void {
+  formatCache.clear();
 }

@@ -16,27 +16,41 @@ export default function CheckoutClientPage() {
   const router = useRouter();
   const getTotalItems = useCartStore((state) => state.getTotalItems);
   const hasRedirected = useRef(false);
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   useEffect(() => {
     // Prevent multiple redirects
-    if (hasRedirected.current) return;
+    if (hasRedirected.current) {
+      return;
+    }
 
     const redirectToCheckout = async () => {
       // If cart is empty, redirect to products
-      if (getTotalItems() === 0) {
+      const totalItems = getTotalItems();
+
+      if (totalItems === 0) {
         router.push("/products");
         return;
       }
 
       try {
+        const cartState = useCartStore.getState();
+
+        // Check if cartId exists
+        if (!cartState.cartId) {
+          console.error("[Checkout] No cart ID found");
+          router.push("/cart?error=no-cart-id");
+          return;
+        }
+
         // Set timeout for safety
         timeoutRef.current = setTimeout(() => {
+          console.error("[Checkout] Checkout timeout");
           router.push("/cart?error=checkout-timeout");
         }, CHECKOUT_TIMEOUT_MS);
 
-        // Get real Shopify checkout URL
-        const checkoutUrl = await useCartStore.getState().getCheckoutUrl();
+        // Get Shopify checkout URL
+        const checkoutUrl = await cartState.getCheckoutUrl();
 
         // Clear timeout on success
         if (timeoutRef.current) {
@@ -48,11 +62,11 @@ export default function CheckoutClientPage() {
           // Redirect to Shopify checkout
           window.location.href = checkoutUrl;
         } else {
-          // Fallback: redirect to cart with error
+          console.error("[Checkout] No checkout URL available");
           router.push("/cart?error=checkout-failed");
         }
-      } catch (error) {
-        console.error("Checkout redirect failed:", error);
+      } catch (err) {
+        console.error("[Checkout] Redirect failed:", err);
         router.push("/cart?error=checkout-error");
       }
     };
@@ -68,7 +82,7 @@ export default function CheckoutClientPage() {
   }, [router, getTotalItems]);
 
   return (
-    <div className="flex min-h-[400px] flex-col items-center justify-center">
+    <div className="flex min-h-[400px] flex-col items-center justify-center p-4">
       <Loader2 className="h-8 w-8 animate-spin text-primary" />
       <p className="mt-4 text-muted-foreground">Redirecting to checkout...</p>
     </div>

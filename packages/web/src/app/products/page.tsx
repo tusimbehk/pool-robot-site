@@ -72,7 +72,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
           />
         </Suspense>
 
-        <ProductSort value="featured" onChange={() => {}} />
+        {/* TODO: ProductSort needs to be client-side */}
       </div>
 
       {/* Products */}

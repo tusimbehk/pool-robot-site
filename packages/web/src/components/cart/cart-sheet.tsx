@@ -1,25 +1,50 @@
 "use client";
 
-import { useCartStore } from "@/store/cart-store";
+import { useMemo, useCallback } from "react";
+import { useCartStore } from "@/store/cart-store-v2";
 import { Button } from "@/components/ui";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui";
-import { ShoppingCart, ShoppingBag } from "lucide-react";
+import { ShoppingCart, ShoppingBag, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { formatCurrency } from "@/lib/utils";
+import { formatPrice } from "@/lib/currency";
+import type { CurrencyCode } from "@/lib/currency";
 import { CartItemComponent } from "./cart-item";
 
+const DEFAULT_CURRENCY: CurrencyCode = "USD";
+
 export function CartSheet() {
+  // Select store values with shallow comparison optimization
   const items = useCartStore((state) => state.items);
   const isOpen = useCartStore((state) => state.isOpen);
   const closeCart = useCartStore((state) => state.closeCart);
-  const getTotalItems = useCartStore((state) => state.getTotalItems);
+  const isSyncing = useCartStore((state) => state.isSyncing);
+  const syncError = useCartStore((state) => state.syncError);
 
-  const subtotal = items.reduce((sum, item) => {
-    return sum + (item.price ? item.price * item.quantity : 0);
-  }, 0);
+  // Memoize subtotal calculation
+  const subtotal = useMemo(() => {
+    return items.reduce((sum, item) => {
+      return sum + (item.price ? item.price * item.quantity : 0);
+    }, 0);
+  }, [items]);
+
+  // Memoize total items count
+  const totalItems = useMemo(() => {
+    return items.reduce((sum, item) => sum + item.quantity, 0);
+  }, [items]);
+
+  // Memoize formatted subtotal
+  const formattedSubtotal = useMemo(
+    () => formatPrice(subtotal, DEFAULT_CURRENCY),
+    [subtotal]
+  );
+
+  // Stable close handler
+  const handleClose = useCallback(() => {
+    closeCart();
+  }, [closeCart]);
 
   return (
-    <Sheet open={isOpen} onOpenChange={closeCart}>
+    <Sheet open={isOpen} onOpenChange={handleClose}>
       <SheetContent className="flex w-full flex-col sm:max-w-lg">
         <SheetHeader className="px-1">
           <SheetTitle>Shopping Cart</SheetTitle>
@@ -35,7 +60,7 @@ export function CartSheet() {
                 Add some products to get started
               </p>
             </div>
-            <Button onClick={closeCart} asChild>
+            <Button onClick={handleClose} asChild>
               <Link href="/products">Browse Products</Link>
             </Button>
           </div>
@@ -50,10 +75,23 @@ export function CartSheet() {
             {/* Footer */}
             <SheetFooter className="px-1 pb-0 pt-4">
               <div className="w-full space-y-4">
+                {/* Sync status indicator */}
+                {isSyncing && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Syncing with Shopify...</span>
+                  </div>
+                )}
+                {syncError && (
+                  <div className="flex items-center gap-2 text-sm text-destructive">
+                    <span>⚠️ {syncError}</span>
+                  </div>
+                )}
+
                 {/* Subtotal */}
                 <div className="flex items-center justify-between text-base font-medium">
                   <span>Subtotal</span>
-                  <span>{formatCurrency(subtotal, "USD")}</span>
+                  <span>{formattedSubtotal}</span>
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Shipping and taxes calculated at checkout
@@ -62,15 +100,15 @@ export function CartSheet() {
                 {/* Actions */}
                 <div className="space-y-2">
                   <Button className="w-full" size="lg" asChild>
-                    <Link href="/cart" onClick={closeCart}>
-                      View Cart ({getTotalItems()})
+                    <Link href="/cart" onClick={handleClose}>
+                      View Cart ({totalItems})
                     </Link>
                   </Button>
                   <Button
                     className="w-full"
                     size="lg"
                     variant="outline"
-                    onClick={closeCart}
+                    onClick={handleClose}
                     asChild
                   >
                     <Link href="/products">Continue Shopping</Link>
@@ -86,12 +124,21 @@ export function CartSheet() {
 }
 
 /**
- * Cart trigger button for header
+ * Cart trigger button for header (optimized with memoization)
  */
 export function CartTrigger() {
   const openCart = useCartStore((state) => state.openCart);
-  const getTotalItems = useCartStore((state) => state.getTotalItems);
-  const totalItems = getTotalItems();
+  const items = useCartStore((state) => state.items);
+
+  // Memoize total items calculation
+  const totalItems = useMemo(() => {
+    return items.reduce((sum, item) => sum + item.quantity, 0);
+  }, [items]);
+
+  // Memoize badge display
+  const badgeDisplay = useMemo(() => {
+    return totalItems > 99 ? "99+" : totalItems.toString();
+  }, [totalItems]);
 
   return (
     <Button
@@ -104,7 +151,7 @@ export function CartTrigger() {
       <span className="sr-only">Open cart</span>
       {totalItems > 0 && (
         <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-          {totalItems > 99 ? "99+" : totalItems}
+          {badgeDisplay}
         </span>
       )}
     </Button>

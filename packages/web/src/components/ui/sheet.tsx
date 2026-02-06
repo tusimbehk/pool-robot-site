@@ -61,6 +61,15 @@ const SheetContent = React.forwardRef<
     <SheetPrimitive.Content
       ref={ref}
       className={cn(sheetVariants({ side }), className)}
+      style={{
+        position: 'fixed',
+        top: '0',
+        right: '0',
+        bottom: '0',
+        width: '100%',
+        maxWidth: '400px',
+        zIndex: 50,
+      }}
       {...props}
     >
       {children}

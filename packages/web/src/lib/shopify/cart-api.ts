@@ -88,10 +88,6 @@ const CART_CREATE_MUTATION = `
             amount
             currencyCode
           }
-          taxAmount {
-            amount
-            currencyCode
-          }
         }
       }
       userErrors {
@@ -143,10 +139,6 @@ const CART_LINES_ADD_MUTATION = `
             amount
             currencyCode
           }
-          taxAmount {
-            amount
-            currencyCode
-          }
         }
       }
       userErrors {
@@ -190,10 +182,6 @@ const CART_LINES_UPDATE_MUTATION = `
             amount
             currencyCode
           }
-          taxAmount {
-            amount
-            currencyCode
-          }
         }
       }
       userErrors {
@@ -224,10 +212,6 @@ const CART_LINES_REMOVE_MUTATION = `
             currencyCode
           }
           totalAmount {
-            amount
-            currencyCode
-          }
-          taxAmount {
             amount
             currencyCode
           }
@@ -312,10 +296,6 @@ const GET_CART_QUERY = `
           currencyCode
         }
         totalAmount {
-          amount
-          currencyCode
-        }
-        taxAmount {
           amount
           currencyCode
         }
