@@ -2,6 +2,7 @@ import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { mockProducts } from "@/lib/shopify";
 import { ProductGallery, ProductInfo } from "@/components/product";
+import type { Product } from "@/lib/shopify";
 
 interface ProductPageProps {
   params: Promise<{
@@ -30,7 +31,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
   };
 }
 
-async function getProduct(slug: string) {
+async function getProduct(slug: string): Promise<Product | null> {
   const { isShopifyConfigured } = await import("@/lib/shopify");
 
   // Fallback to mock data if Shopify not configured
@@ -64,13 +65,21 @@ export default async function ProductPage({ params }: ProductPageProps) {
   }
 
   // Get related products (same type, excluding current)
-  let relatedProducts: typeof mockProducts = [];
+  let relatedProducts: Product[] = [];
 
   const { isShopifyConfigured } = await import("@/lib/shopify");
   if (isShopifyConfigured()) {
-    // For Shopify, we'd need to fetch related products
-    // For now, just show nothing or could fetch by type
-    relatedProducts = [];
+    // Fetch related products from Shopify
+    try {
+      const { shopifyClient } = await import("@/lib/shopify/client");
+      const result = await shopifyClient.getProducts(4, undefined, `product_type:'${product.productType}'`);
+      relatedProducts = result.edges
+        .map((e) => e.node)
+        .filter((p) => p.id !== product.id && p.availableForSale);
+    } catch {
+      // If fetch fails, show no related products
+      relatedProducts = [];
+    }
   } else {
     relatedProducts = mockProducts
       .filter(
