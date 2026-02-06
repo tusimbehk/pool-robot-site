@@ -23,7 +23,7 @@ async function testCronEndpoints() {
 
   // Test unauthorized access
   const response = await fetch(
-    `http://localhost:3003/api/cron/check-abandoned-carts`,
+    `http://localhost:3005/api/cron/check-abandoned-carts`,
     {
       headers: { 'Authorization': `Bearer wrong-secret` },
     }
