@@ -28,22 +28,19 @@ export async function GET(request: NextRequest) {
     const days = Math.min(Math.max(parseInt(searchParams.get('days') || '30'), 1), 365);
 
     // Query user activity by date
-    const result = await db.execute<{
-      date: string;
-      active_users: bigint;
-    }>(sql`
-      SELECT
-        DATE(occurred_at) as date,
-        COUNT(DISTINCT user_id) as active_users
-      FROM user_events
-      WHERE occurred_at >= NOW() - INTERVAL '1 day' * ${days}
-      GROUP BY DATE(occurred_at)
-      ORDER BY date ASC
-    `);
+    const result = await db
+      .select({
+        date: sql<string>`DATE(occurred_at)`.as('date'),
+        activeUsers: sql<number>`COUNT(DISTINCT user_id)`.as('active_users'),
+      })
+      .from(userEvents)
+      .where(sql`occurred_at >= NOW() - INTERVAL '1 day' * ${days}`)
+      .groupBy(sql`DATE(occurred_at)`)
+      .orderBy(sql`DATE(occurred_at)`);
 
-    const data: ActivityDataPoint[] = result.rows.map(row => ({
-      date: row.date,
-      activeUsers: Number(row.active_users),
+    const data: ActivityDataPoint[] = result.map(row => ({
+      date: row.date as string,
+      activeUsers: Number(row.activeUsers),
     }));
 
     return NextResponse.json({ data });

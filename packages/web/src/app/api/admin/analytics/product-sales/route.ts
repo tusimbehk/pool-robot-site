@@ -29,25 +29,21 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '10'), 1), 100);
 
     // Query product sales aggregated by product title
-    const result = await db.execute<{
-      product_title: string;
-      quantity: bigint;
-      revenue: string;
-    }>(sql`
-      SELECT
-        product_title,
-        SUM(quantity) as quantity,
-        SUM(quantity * price) as revenue
-      FROM order_items
-      GROUP BY product_title
-      ORDER BY quantity DESC
-      LIMIT ${limit}
-    `);
+    const result = await db
+      .select({
+        product: sql<string>`product_title`.as('product_title'),
+        quantity: sql<number>`SUM(quantity)`.as('quantity'),
+        revenue: sql<string>`SUM(quantity * price)::text`.as('revenue'),
+      })
+      .from(orderItems)
+      .groupBy(sql`product_title`)
+      .orderBy(sql`SUM(quantity) DESC`)
+      .limit(limit);
 
-    const data: ProductSalesData[] = result.rows.map(row => ({
-      product: row.product_title,
+    const data: ProductSalesData[] = result.map(row => ({
+      product: row.product as string,
       quantity: Number(row.quantity),
-      revenue: row.revenue,
+      revenue: row.revenue as string,
     }));
 
     return NextResponse.json({ data });
