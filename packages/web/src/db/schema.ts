@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, timestamp, text, jsonb, integer, boolean } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, timestamp, text, jsonb, integer, boolean, decimal } from 'drizzle-orm/pg-core';
 
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -48,4 +48,37 @@ export const userSessions = pgTable('user_sessions', {
   addedToCart: boolean('added_to_cart').default(false),
   startedCheckout: boolean('started_checkout').default(false),
   completedPurchase: boolean('completed_purchase').default(false),
+});
+
+export const orders = pgTable('orders', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').references(() => users.id),
+  shopifyOrderId: varchar('shopify_order_id', { length: 255 }).unique(),
+  shopifyOrderNumber: varchar('shopify_order_number', { length: 50 }),
+  status: varchar('status', { length: 50 }),
+  financialStatus: varchar('financial_status', { length: 50 }),
+  fulfillmentStatus: varchar('fulfillment_status', { length: 50 }),
+  subtotalPrice: decimal('subtotal_price', { precision: 10, scale: 2 }),
+  totalTax: decimal('total_tax', { precision: 10, scale: 2 }),
+  totalShipping: decimal('total_shipping', { precision: 10, scale: 2 }),
+  totalPrice: decimal('total_price', { precision: 10, scale: 2 }),
+  currency: varchar('currency', { length: 3 }),
+  shippingAddress: jsonb('shipping_address'),
+  billingAddress: jsonb('billing_address'),
+  processedAt: timestamp('processed_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const orderItems = pgTable('order_items', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  orderId: uuid('order_id').references(() => orders.id),
+  shopifyProductId: varchar('shopify_product_id', { length: 255 }),
+  shopifyVariantId: varchar('shopify_variant_id', { length: 255 }),
+  productTitle: varchar('product_title', { length: 255 }),
+  variantTitle: varchar('variant_title', { length: 255 }),
+  sku: varchar('sku', { length: 100 }),
+  quantity: integer('quantity'),
+  price: decimal('price', { precision: 10, scale: 2 }),
+  totalDiscount: decimal('total_discount', { precision: 10, scale: 2 }),
 });
