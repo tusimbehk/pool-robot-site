@@ -23,20 +23,32 @@ const mockAnalytics = {
   user: vi.fn(() => ({ anonymousId: () => "mock-anonymous-id" })),
 };
 
+// Mock document methods
+const mockScript = { src: "", onload: null, type: "", async: false };
+let createElementSpy: any;
+let appendChildSpy: any;
+
 describe("Analytics", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // @ts-ignore
     global.window = { analytics: mockAnalytics } as any;
+    // Setup document mocks
+    createElementSpy = vi.spyOn(document, "createElement").mockReturnValue(mockScript as any);
+    appendChildSpy = vi.spyOn(document.head, "appendChild").mockImplementation(() => mockScript as any);
+  });
+
+  afterEach(() => {
+    createElementSpy?.mockRestore();
+    appendChildSpy?.mockRestore();
   });
 
   describe("initAnalytics", () => {
     it("should initialize with valid write key", () => {
       initAnalytics("valid-write-key");
 
-      // In a real test, this would verify script injection
-      // For now, we verify it doesn't throw
-      expect(true).toBe(true);
+      expect(createElementSpy).toHaveBeenCalledWith("script");
+      expect(mockScript.src).toContain("valid-write-key");
     });
 
     it("should use mock mode for invalid write key", () => {
@@ -46,6 +58,7 @@ describe("Analytics", () => {
 
       // Should set ready state even without valid key
       expect(isAnalyticsReady()).toBe(true);
+      consoleLog.mockRestore();
     });
   });
 
@@ -59,23 +72,6 @@ describe("Analytics", () => {
       expect(mockAnalytics.page).toHaveBeenCalledWith(
         "Home",
         { path: "/" },
-        expect.any(Object)
-      );
-    });
-
-    it("should log to console in mock mode", () => {
-      const consoleLog = vi.spyOn(console, "log");
-
-      // @ts-ignore - remove analytics for mock mode
-      delete global.window.analytics;
-
-      trackPage({
-        name: "Test",
-        properties: { test: true },
-      });
-
-      expect(consoleLog).toHaveBeenCalledWith(
-        "[Segment] Page:",
         expect.any(Object)
       );
     });

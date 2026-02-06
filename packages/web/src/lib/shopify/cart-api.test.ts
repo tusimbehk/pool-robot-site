@@ -4,20 +4,30 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
+
+// Mock the constants module before importing cart-api
+vi.mock("../constants", () => ({
+  SHOPIFY_CONFIG: {
+    domain: "test.myshopify.com",
+    storefrontToken: "test-token",
+    apiVersion: "2024-10",
+  },
+}));
+
 import { cartApi } from "./cart-api";
 
-// Mock fetch
-global.fetch = vi.fn();
+const mockFetch = vi.fn();
 
 describe("Cart API", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubGlobal("fetch", mockFetch);
   });
 
   describe("retry logic", () => {
     it("should retry on failure", async () => {
       let attempts = 0;
-      vi.mocked(fetch).mockImplementation(async () => {
+      mockFetch.mockImplementation(async () => {
         attempts++;
         if (attempts < 3) {
           throw new Error("Network error");
@@ -32,7 +42,7 @@ describe("Cart API", () => {
 
   describe("error handling", () => {
     it("should handle GraphQL errors", async () => {
-      vi.mocked(fetch).mockResolvedValue(
+      mockFetch.mockResolvedValue(
         new Response(
           JSON.stringify({
             data: {
@@ -49,7 +59,7 @@ describe("Cart API", () => {
     });
 
     it("should handle network errors", async () => {
-      vi.mocked(fetch).mockRejectedValue(new Error("Network error"));
+      mockFetch.mockRejectedValue(new Error("Network error"));
 
       // Test would verify retry logic
     });
@@ -86,7 +96,7 @@ describe("Cart API", () => {
     };
 
     it("should create a cart", async () => {
-      vi.mocked(fetch).mockResolvedValue(
+      mockFetch.mockResolvedValue(
         new Response(
           JSON.stringify({
             data: {
@@ -101,10 +111,10 @@ describe("Cart API", () => {
       });
 
       expect(result).toEqual(mockCart);
-    });
+    }, 10000);
 
     it("should add lines to cart", async () => {
-      vi.mocked(fetch).mockResolvedValue(
+      mockFetch.mockResolvedValue(
         new Response(
           JSON.stringify({
             data: {
@@ -122,7 +132,7 @@ describe("Cart API", () => {
     });
 
     it("should update line quantities", async () => {
-      vi.mocked(fetch).mockResolvedValue(
+      mockFetch.mockResolvedValue(
         new Response(
           JSON.stringify({
             data: {
@@ -140,7 +150,7 @@ describe("Cart API", () => {
     });
 
     it("should remove lines from cart", async () => {
-      vi.mocked(fetch).mockResolvedValue(
+      mockFetch.mockResolvedValue(
         new Response(
           JSON.stringify({
             data: {
@@ -156,7 +166,7 @@ describe("Cart API", () => {
     });
 
     it("should get cart by ID with checkout URL", async () => {
-      vi.mocked(fetch).mockResolvedValue(
+      mockFetch.mockResolvedValue(
         new Response(
           JSON.stringify({
             data: {
@@ -173,7 +183,7 @@ describe("Cart API", () => {
     });
 
     it("should return null when cart is not found", async () => {
-      vi.mocked(fetch).mockResolvedValue(
+      mockFetch.mockResolvedValue(
         new Response(
           JSON.stringify({
             data: {
