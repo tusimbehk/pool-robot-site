@@ -154,5 +154,38 @@ describe("Cart API", () => {
 
       expect(result).toEqual(mockCart);
     });
+
+    it("should get cart by ID with checkout URL", async () => {
+      vi.mocked(fetch).mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            data: {
+              cart: mockCart,
+            },
+          })
+        )
+      );
+
+      const result = await cartApi.getCart("gid://shopify/Cart/1");
+
+      expect(result).toEqual(mockCart);
+      expect(result?.checkoutUrl).toBe("https://checkout.shopify.com/1");
+    });
+
+    it("should return null when cart is not found", async () => {
+      vi.mocked(fetch).mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            data: {
+              cart: null,
+            },
+          })
+        )
+      );
+
+      const result = await cartApi.getCart("gid://shopify/Cart/nonexistent");
+
+      expect(result).toBeNull();
+    });
   });
 });
