@@ -72,7 +72,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
     // Fetch related products from Shopify
     try {
       const { shopifyClient } = await import("@/lib/shopify/client");
-      const result = await shopifyClient.getProducts(4, undefined, `product_type:'${product.productType}'`);
+      const result = await shopifyClient.getProducts(4, undefined, `product_type:${product.productType}`);
       relatedProducts = result.edges
         .map((e) => e.node)
         .filter((p) => p.id !== product.id && p.availableForSale);
