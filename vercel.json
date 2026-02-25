@@ -54,5 +54,15 @@
       "destination": "/",
       "permanent": true
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/check-abandoned-carts",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/recalculate-rfm",
+      "schedule": "0 2 * * *"
+    }
   ]
 }
