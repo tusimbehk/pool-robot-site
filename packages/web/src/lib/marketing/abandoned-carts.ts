@@ -66,15 +66,15 @@ export async function findAbandonedCarts(): Promise<AbandonedCart[]> {
         .where(eq(users.id, session.userId))
         .limit(1);
 
-      email = user?.email;
+      email = user?.email ?? undefined;
     }
 
     abandonedCarts.push({
       sessionId: session.sessionId,
-      userId: session.userId,
+      userId: session.userId ?? undefined,
       email,
       cartItems: [], // Would need to fetch from session data
-      lastSeenAt: session.lastSeenAt || new Date(),
+      lastSeenAt: session.lastSeenAt ?? new Date(),
     });
   }
 

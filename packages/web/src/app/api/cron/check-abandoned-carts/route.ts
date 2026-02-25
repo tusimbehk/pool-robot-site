@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
       results.push({
         sessionId: cart.sessionId,
         email: cart.email,
-        result: result.success ? 'sent' : result.reason || 'failed',
+        result: result.success ? 'sent' : ('reason' in result ? result.reason : 'failed'),
       });
     }
 

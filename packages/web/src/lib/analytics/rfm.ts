@@ -76,12 +76,16 @@ export async function calculateUserRFM(userId: string): Promise<RFMScores> {
   // Calculate Recency (days since last purchase)
   let daysSinceLastPurchase = 999;
   if (userOrders.length > 0) {
-    const lastOrder = userOrders.reduce((latest, order) =>
-      new Date(order.processedAt) > new Date(latest.processedAt) ? order : latest
-    );
-    daysSinceLastPurchase = Math.floor(
-      (Date.now() - new Date(lastOrder.processedAt).getTime()) / (1000 * 60 * 60 * 24)
-    );
+    const lastOrder = userOrders.reduce((latest, order) => {
+      const latestDate = latest.processedAt ? new Date(latest.processedAt) : new Date(0);
+      const orderDate = order.processedAt ? new Date(order.processedAt) : new Date(0);
+      return orderDate > latestDate ? order : latest;
+    });
+    if (lastOrder.processedAt) {
+      daysSinceLastPurchase = Math.floor(
+        (Date.now() - new Date(lastOrder.processedAt).getTime()) / (1000 * 60 * 60 * 24)
+      );
+    }
   }
 
   const rScore = calculateRecencyScore(daysSinceLastPurchase);
