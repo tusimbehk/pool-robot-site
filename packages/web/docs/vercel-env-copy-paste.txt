@@ -1,0 +1,40 @@
+# ============================================
+# Vercel 环境变量 - 一键复制版
+# ============================================
+# 在 Vercel 项目设置中逐一添加以下变量
+# 每个变量的格式: NAME=VALUE
+# ============================================
+
+# 1. 数据库
+DATABASE_URL=postgresql://user:password@host:5432/dbname
+
+# 2. Shopify 店铺名称
+SHOPIFY_SHOP_NAME=your-shop.myshopify.com
+
+# 3. Shopify Access Token
+SHOPIFY_ACCESS_TOKEN=shpat_xxxxxxxxxxxxx
+
+# 4. Shopify Webhook Secret
+SHOPIFY_WEBHOOK_SECRET=your-webhook-secret
+
+# 5. Resend API Key
+RESEND_API_KEY=re_xxxxxxxxxxxxx
+
+# 6. 发件邮箱
+FROM_EMAIL=noreply@poolclean.com
+
+# 7. Cron 安全密钥 (已生成，直接使用)
+CRON_SECRET=63f94f887501164895b9ba4dd26ac1191a6473fb2c35daa9f32ae0e07592ddc5
+
+# 8. 管理后台密码
+ADMIN_PASSWORD=admin123
+
+# ============================================
+# 需要替换的变量值 (填入你的实际值)
+# ============================================
+# - user:password@host:5432/dbname     → 你的数据库连接字符串
+# - your-shop.myshopify.com             → 你的 Shopify 店铺名称
+# - shpat_xxxxxxxxxxxxx                 → 你的 Shopify Admin Token
+# - your-webhook-secret                 → 你的 Shopify Webhook Secret
+# - re_xxxxxxxxxxxxx                    → 你的 Resend API Key
+# - noreply@poolclean.com               → 你的发件邮箱 (需在 Resend 验证)
