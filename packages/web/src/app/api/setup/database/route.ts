@@ -223,7 +223,10 @@ export async function GET(request: NextRequest) {
       ORDER BY table_name
     `);
 
-    const existingTables = result.rows.map((row: any) => row.table_name);
+    const existingTables: string[] = [];
+    for (const row of result) {
+      existingTables.push(row.table_name as string);
+    }
     const expectedTables = tables.map(t => t.name);
 
     return NextResponse.json({
