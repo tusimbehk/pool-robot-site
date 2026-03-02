@@ -253,7 +253,7 @@ export function trackEvent(event: SegmentEvent): void {
 
   // 2. Send to self-hosted API (Dual-Write)
   const anonymousId = event.anonymousId || getCookieAnonymousId();
-  const userId = event.userId || getUserId();
+  const userId = event.userId || getUserId() || undefined;
   sendToSelfHostedAPI(
     event.event,
     event.properties || {},
