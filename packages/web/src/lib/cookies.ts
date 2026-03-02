@@ -1,5 +1,4 @@
 import { cookies } from 'next/headers';
-import { RequestCookies } from 'next/dist/compiled/@edge-runtime/cookies';
 
 export const ID_KEYS = {
   ANONYMOUS_ID: 'pool_anonymous_id',
@@ -8,40 +7,14 @@ export const ID_KEYS = {
 } as const;
 
 /**
- * Get anonymous ID from request headers (for API routes)
- */
-export function getAnonymousIdFromRequest(request: Request): string {
-  const cookieHeader = request.headers.get('cookie') || '';
-  const cookies = new RequestCookies(cookieHeader);
-  const anonymousId = cookies.get(ID_KEYS.ANONYMOUS_ID)?.value;
-
-  if (anonymousId) {
-    return anonymousId;
-  }
-
-  // Generate new anonymous ID if not exists
-  return `anon_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-}
-
-/**
- * Get user ID from request headers (for API routes)
- */
-export function getUserIdFromRequest(request: Request): string | null {
-  const cookieHeader = request.headers.get('cookie') || '';
-  const cookies = new RequestCookies(cookieHeader);
-  return cookies.get(ID_KEYS.USER_ID)?.value || null;
-}
-
-/**
  * These functions use next/headers and only work in Server Components
- * NOT compatible with Node.js runtime API routes
  */
 
 /**
  * Get anonymous ID (Server Components only)
  */
-export function getAnonymousId(): string {
-  const cookieStore = cookies();
+export async function getAnonymousId(): Promise<string> {
+  const cookieStore = await cookies();
   const anonymousId = cookieStore.get(ID_KEYS.ANONYMOUS_ID)?.value;
 
   if (anonymousId) {
@@ -63,16 +36,16 @@ export function getAnonymousId(): string {
 /**
  * Get user ID (Server Components only)
  */
-export function getUserId(): string | null {
-  const cookieStore = cookies();
+export async function getUserId(): Promise<string | null> {
+  const cookieStore = await cookies();
   return cookieStore.get(ID_KEYS.USER_ID)?.value || null;
 }
 
 /**
  * Set user ID (Server Components only)
  */
-export function setUserId(userId: string): void {
-  const cookieStore = cookies();
+export async function setUserId(userId: string): Promise<void> {
+  const cookieStore = await cookies();
   cookieStore.set(ID_KEYS.USER_ID, userId, {
     httpOnly: false,
     secure: process.env.NODE_ENV === 'production',
@@ -84,7 +57,7 @@ export function setUserId(userId: string): void {
 /**
  * Clear user ID (Server Components only)
  */
-export function clearUserId(): void {
-  const cookieStore = cookies();
+export async function clearUserId(): Promise<void> {
+  const cookieStore = await cookies();
   cookieStore.delete(ID_KEYS.USER_ID);
 }
